@@ -1,0 +1,35 @@
+services:
+  app:
+      build: .
+      container_name: budgetMS
+      volumes:
+        - ./src:/src
+        - ./out:/out
+      working_dir: /src
+      command: >
+        sh -c "
+        if [ ! -f go.mod ]; then
+          go mod init main
+        fi &&
+        go mod tidy &&
+        go build -o /out/main . &&
+        /out/main
+        "
+      depends_on:
+        - db
+      tty: true
+      stdin_open: true
+  db:
+      image: postgres:16-alpine
+      container_name: budgetMS-db
+      environment:
+        POSTGRES_USER: root
+        POSTGRES_PASSWORD: password
+        POSTGRES_DB: budgetMS
+      ports:
+        - "5432:5432"
+      volumes:
+        - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
