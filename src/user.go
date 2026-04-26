@@ -14,6 +14,7 @@ type User struct {
 	Email     string
 	Name      string
 	Password  string
+	IsAdmin   bool
 	Login     sql.NullTime
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -36,7 +37,7 @@ func CreateUser(db *sql.DB, email, name, password string) (int64, error) {
 	}
 
 	var userID int64
-	err := db.QueryRow(
+	err = db.QueryRow(
 		"INSERT INTO users (email, name, password) VALUES ($1, $2, $3) RETURNING user_id",
 		email,
 		name,
@@ -53,13 +54,14 @@ func CreateUser(db *sql.DB, email, name, password string) (int64, error) {
 func GetUserByID(db *sql.DB, userID int64) (*User, error) {
 	user := &User{}
 	err := db.QueryRow(
-		"SELECT user_id, email, name, password, login, created_at, updated_at FROM users WHERE user_id = $1",
+		"SELECT user_id, email, name, password, is_admin, login, created_at, updated_at FROM users WHERE user_id = $1",
 		userID,
 	).Scan(
 		&user.UserID,
 		&user.Email,
 		&user.Name,
 		&user.Password,
+		&user.IsAdmin,
 		&user.Login,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -75,13 +77,14 @@ func GetUserByID(db *sql.DB, userID int64) (*User, error) {
 func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 	user := &User{}
 	err := db.QueryRow(
-		"SELECT user_id, email, name, password, login, created_at, updated_at FROM users WHERE email = $1",
+		"SELECT user_id, email, name, password, is_admin, login, created_at, updated_at FROM users WHERE email = $1",
 		email,
 	).Scan(
 		&user.UserID,
 		&user.Email,
 		&user.Name,
 		&user.Password,
+		&user.IsAdmin,
 		&user.Login,
 		&user.CreatedAt,
 		&user.UpdatedAt,
@@ -96,7 +99,7 @@ func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 // 全ユーザを取得
 func ListUsers(db *sql.DB) ([]User, error) {
 	rows, err := db.Query(
-		"SELECT user_id, email, name, password, login, created_at, updated_at FROM users ORDER BY user_id",
+		"SELECT user_id, email, name, password, is_admin, login, created_at, updated_at FROM users ORDER BY user_id",
 	)
 	if err != nil {
 		return nil, err
@@ -111,6 +114,7 @@ func ListUsers(db *sql.DB) ([]User, error) {
 			&user.Email,
 			&user.Name,
 			&user.Password,
+			&user.IsAdmin,
 			&user.Login,
 			&user.CreatedAt,
 			&user.UpdatedAt,

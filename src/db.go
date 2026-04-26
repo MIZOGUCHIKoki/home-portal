@@ -15,18 +15,29 @@ import (
 func ConnectDB() *sql.DB {
 	_ = godotenv.Load()
 
-	host := getEnv("DB_HOST", "db")
-	port := getEnv("DB_PORT", "5432")
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		log.Fatal("DB_HOST is required")
+	}
+	port := os.Getenv("DB_PORT")
+	if port == "" {
+		log.Fatal("DB_PORT is required")
+	}
 	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbName := getEnv("DB_NAME", "budgetMS")
-	sslMode := getEnv("DB_SSLMODE", "disable")
-
 	if user == "" {
 		log.Fatal("DB_USER is required")
 	}
+	password := os.Getenv("DB_PASSWORD")
 	if password == "" {
 		log.Fatal("DB_PASSWORD is required")
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		log.Fatal("DB_NAME is required")
+	}
+	sslMode := os.Getenv("DB_SSLMODE")
+	if sslMode == "" {
+		sslMode = "disable"
 	}
 
 	if _, err := strconv.Atoi(port); err != nil {

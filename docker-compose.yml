@@ -1,52 +1,62 @@
+x-go-service: &go-service
+  build: .
+  image: budgetms-go-base:local  # ← ここでイメージ名を統一！これによって1回しかビルドされません
+  volumes:
+    - ./src:/src
+    - ./out:/out
+  working_dir: /src
+  depends_on:
+    - db
+  networks:
+    - budgetMS_network
+
 services:
   app:
-      build: .
-      container_name: budgetMS
-      volumes:
-        - ./src:/src
-        - ./out:/out
-      working_dir: /src
-      command: >
-        sh -c "
-        if [ ! -f go.mod ]; then
-          go mod init main
-        fi &&
-        go mod tidy &&
-        go build -o /out/main . &&
-        /out/main app
-        "
-      depends_on:
-        - db
-      tty: true
-      stdin_open: true
+    <<: *go-service  # ← 共通設定を読み込み
+    profiles: ["app"]
+    container_name: budgetMS
+    ports:
+      - "8080:8080"
+    tty: true
+    stdin_open: true
+    command: >
+      sh -c "
+      if [ ! -f go.mod ]; then
+        go mod init main
+      fi &&
+      go mod tidy &&
+      go build -o /out/main . &&
+      /out/main app
+      "
 
   init:
-      build: .
-      profiles: ["tools"] # このサービスは tools プロフィールでのみで起動d
-      volumes:
-        - ./src:/src
-        - ./out:/out
-      working_dir: /src
-      command: >
-        sh -c "
-        go mod tidy &&
-        go build -o /out/main . &&
-        /out/main setup
-        "
-      depends_on:
-        - db
+    <<: *go-service  # ← 共通設定を読み込み
+    profiles: ["init"]
+    command: >
+      sh -c "
+      go mod tidy &&
+      go build -o /out/main . &&
+      /out/main setup
+      "
 
   db:
-      image: postgres:16-alpine
-      container_name: budgetMS-db
-      environment:
-        POSTGRES_USER: root
-        POSTGRES_PASSWORD: password
-        POSTGRES_DB: budgetMS
-      ports:
-        - "5432:5432"
-      volumes:
-        - db_data:/var/lib/postgresql/data
+    image: postgres:16-alpine
+    container_name: budgetMS-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: budgetMS
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - budgetMS_network
 
 volumes:
   db_data:
+
+networks:
+  budgetMS_network:
+    driver: bridge
+    name: budgetMS_network

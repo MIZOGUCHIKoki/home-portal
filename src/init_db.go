@@ -11,12 +11,20 @@ func InitDB(db *sql.DB) {
 	fmt.Println("🛠️ テーブルの初期化を確認します...")
 
 	createTablesSQL := `
+	-- 0. 既存テーブルを削除
+	DROP TABLE IF EXISTS transactions;
+	DROP TABLE IF EXISTS budgets;
+	DROP TABLE IF EXISTS categories;
+	DROP TABLE IF EXISTS methods;
+	DROP TABLE IF EXISTS users;
+
 	-- 1. Userテーブル
 	CREATE TABLE IF NOT EXISTS users (
 		user_id SERIAL PRIMARY KEY,
 		email TEXT NOT NULL UNIQUE,
 		name TEXT NOT NULL,
 		password TEXT NOT NULL,
+		is_admin BOOLEAN NOT NULL DEFAULT FALSE,
 		login DATE,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -59,7 +67,7 @@ func InitDB(db *sql.DB) {
 	`
 
 	// SQLの実行
-	_, err = db.Exec(createTablesSQL)
+	_, err := db.Exec(createTablesSQL)
 	if err != nil {
 		log.Fatalf("テーブル初期化エラー: %v", err)
 	}
