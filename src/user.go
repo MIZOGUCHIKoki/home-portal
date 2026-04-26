@@ -21,6 +21,11 @@ type User struct {
 }
 
 func CreateUser(db *sql.DB, email, name, password string) (int64, error) {
+	return CreateUserWithAdmin(db, email, name, password, false)
+}
+
+// CreateUserWithAdmin は管理者フラグ付きでユーザを作成します
+func CreateUserWithAdmin(db *sql.DB, email, name, password string, isAdmin bool) (int64, error) {
 	if email == "" {
 		return 0, errors.New("email is required")
 	}
@@ -38,10 +43,11 @@ func CreateUser(db *sql.DB, email, name, password string) (int64, error) {
 
 	var userID int64
 	err = db.QueryRow(
-		"INSERT INTO users (email, name, password) VALUES ($1, $2, $3) RETURNING user_id",
+		"INSERT INTO users (email, name, password, is_admin) VALUES ($1, $2, $3, $4) RETURNING user_id",
 		email,
 		name,
 		hash,
+		isAdmin,
 	).Scan(&userID)
 	if err != nil {
 		return 0, err
@@ -156,6 +162,49 @@ func UpdateUser(db *sql.DB, userID int64, email, name, password string) error {
 		email,
 		name,
 		hash,
+		userID,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// UpdateUserWithAdmin は管理者フラグも含めてユーザを更新します
+func UpdateUserWithAdmin(db *sql.DB, userID int64, email, name, password string, isAdmin bool) error {
+	if userID <= 0 {
+		return errors.New("userID is required")
+	}
+	if email == "" {
+		return errors.New("email is required")
+	}
+	if name == "" {
+		return errors.New("name is required")
+	}
+	if password == "" {
+		return errors.New("password is required")
+	}
+
+	hash, err := HashPassword(password)
+	if err != nil {
+		return err
+	}
+
+	result, err := db.Exec(
+		"UPDATE users SET email = $1, name = $2, password = $3, is_admin = $4, updated_at = CURRENT_TIMESTAMP WHERE user_id = $5",
+		email,
+		name,
+		hash,
+		isAdmin,
 		userID,
 	)
 	if err != nil {

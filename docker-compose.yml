@@ -28,7 +28,23 @@ services:
       go build -o /out/main . &&
       /out/main app
       "
-
+  api:
+    <<: *go-service  # ← 共通設定を読み込み
+    profiles: ["api"]
+    container_name: budgetMS-api
+    ports:
+      - "8081:8080"
+    tty: true
+    stdin_open: true
+    command: >
+      sh -c "
+      if [ ! -f go.mod ]; then
+        go mod init main
+      fi &&
+      go mod tidy &&
+      go build -o /out/main . &&
+      /out/main api
+      "
   init:
     <<: *go-service  # ← 共通設定を読み込み
     profiles: ["init"]

@@ -21,6 +21,8 @@ func main() {
     case "setup":
         InitDB(db)
         SeedMasterData(db)
+    case "api":
+        StartAPIServer(db)
     case "help", "-h", "--help":
         printUsage()
     default:
@@ -30,7 +32,8 @@ func main() {
 }
 
 func printUsage() {
-    fmt.Println("使用方法: /out/main [app|setup]")
+    fmt.Println("使用方法: /out/main [app|setup|api]")
     fmt.Println("  app   : 通常起動モード")
     fmt.Println("  setup : init + seed をまとめて実行")
+    fmt.Println("  api   : JSON API サーバーを起動")
 }
