@@ -4,32 +4,12 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-
-	// PostgreSQLのドライバーをインポート (ブランクインポート)
-	_ "github.com/lib/pq"
 )
 
-// InitDB はデータベースに接続し、必要なテーブルが存在しなければ作成します
-func InitDB() *sql.DB {
-	// Docker Composeの設定に合わせた接続情報 (DSN)
-	// host=db は compose.yaml のサービス名です
-	dsn := "host=db port=5432 user=root password=password dbname=budgetMS sslmode=disable"
+// InitDB は必要なテーブルが存在しなければ作成します
+func InitDB(db *sql.DB) {
+	fmt.Println("🛠️ テーブルの初期化を確認します...")
 
-	// DBへの接続設定
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		log.Fatalf("DB接続設定エラー: %v", err)
-	}
-
-	// 実際にDBと通信できるか確認
-	if err := db.Ping(); err != nil {
-		log.Fatalf("DB疎通確認エラー (DBが起動していない可能性があります): %v", err)
-	}
-
-	fmt.Println("📦 データベースに接続しました。テーブルの初期化を確認します...")
-
-	// ER図を元にしたテーブル作成SQL
-	// 外部キー制約(REFERENCES)があるため、作成順序が重要です (親テーブルから先に作る)
 	createTablesSQL := `
 	-- 1. Userテーブル
 	CREATE TABLE IF NOT EXISTS users (
@@ -85,6 +65,4 @@ func InitDB() *sql.DB {
 	}
 
 	fmt.Println("✅ テーブルの準備が完了しました！")
-
-	return db
 }
