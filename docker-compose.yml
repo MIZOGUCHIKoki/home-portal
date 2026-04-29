@@ -1,6 +1,6 @@
 x-go-service: &go-service
   build: .
-  image: budgetms-go-base:local  # ← ここでイメージ名を統一！これによって1回しかビルドされません
+  image: budgetms-go-base:local
   volumes:
     - ./src:/src
     - ./out:/out
@@ -12,9 +12,9 @@ x-go-service: &go-service
 
 services:
   app:
-    <<: *go-service  # ← 共通設定を読み込み
+    <<: *go-service
     profiles: ["app"]
-    container_name: budgetMS
+    container_name: budgetMS-app
     ports:
       - "8080:8080"
     tty: true
@@ -29,7 +29,7 @@ services:
       /out/main app
       "
   api:
-    <<: *go-service  # ← 共通設定を読み込み
+    <<: *go-service
     profiles: ["api"]
     container_name: budgetMS-api
     ports:
@@ -46,7 +46,8 @@ services:
       /out/main api
       "
   init:
-    <<: *go-service  # ← 共通設定を読み込み
+    <<: *go-service
+    container_name: budgetMS-init
     profiles: ["init"]
     command: >
       sh -c "
