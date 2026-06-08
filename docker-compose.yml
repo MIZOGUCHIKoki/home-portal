@@ -2,8 +2,7 @@ x-go-service: &go-service
   build: .
   image: home-portal-go:latest
   volumes:
-    - ./src:/src
-    - ./out:/out
+    - ./src/api:/src
   working_dir: /src
   depends_on:
     - db
