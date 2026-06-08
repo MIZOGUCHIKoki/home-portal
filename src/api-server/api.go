@@ -1,19 +1,13 @@
 package main
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
-
-	"encoding/base64"
 )
 
 type APIServer struct {
@@ -60,24 +54,6 @@ type methodResponse struct {
 	MethodName string `json:"methodName"`
 }
 
-type loginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type loginResponse struct {
-	Token   string       `json:"token"`
-	Expires time.Time    `json:"expires"`
-	User    userResponse `json:"user"`
-}
-
-type authClaims struct {
-	UserID  int64  `json:"uid"`
-	Email   string `json:"email"`
-	IsAdmin bool   `json:"isAdmin"`
-	Exp     int64  `json:"exp"`
-}
-
 func StartAPIServer(db *sql.DB) {
 	port := getEnv("API_PORT", "8080")
 	server := newAPIServer(db)
@@ -94,51 +70,32 @@ func newAPIServer(db *sql.DB) *APIServer {
 		mux: http.NewServeMux(),
 	}
 
+	// 共通エンドポイント
 	server.mux.HandleFunc("GET /health", server.handleHealth)
 	server.mux.HandleFunc("GET /", server.handleRoot)
-	server.mux.HandleFunc("POST /login", server.handleLogin)
 
+	// ユーザー管理エンドポイント (認証なし)
 	server.mux.HandleFunc("GET /users", server.handleListUsers)
-	server.mux.HandleFunc("POST /users", server.withAdmin(server.handleCreateUser))
+	server.mux.HandleFunc("POST /users", server.handleCreateUser)
 	server.mux.HandleFunc("GET /users/{id}", server.handleGetUser)
-	server.mux.HandleFunc("PUT /users/{id}", server.withAdmin(server.handleUpdateUser))
-	server.mux.HandleFunc("DELETE /users/{id}", server.withAdmin(server.handleDeleteUser))
+	server.mux.HandleFunc("PUT /users/{id}", server.handleUpdateUser)
+	server.mux.HandleFunc("DELETE /users/{id}", server.handleDeleteUser)
 
+	// カテゴリ管理エンドポイント (認証なし)
 	server.mux.HandleFunc("GET /categories", server.handleListCategories)
-	server.mux.HandleFunc("POST /categories", server.withAdmin(server.handleCreateCategory))
+	server.mux.HandleFunc("POST /categories", server.handleCreateCategory)
 	server.mux.HandleFunc("GET /categories/{id}", server.handleGetCategory)
-	server.mux.HandleFunc("PUT /categories/{id}", server.withAdmin(server.handleUpdateCategory))
-	server.mux.HandleFunc("DELETE /categories/{id}", server.withAdmin(server.handleDeleteCategory))
+	server.mux.HandleFunc("PUT /categories/{id}", server.handleUpdateCategory)
+	server.mux.HandleFunc("DELETE /categories/{id}", server.handleDeleteCategory)
 
+	// 決済方法管理エンドポイント (認証なし)
 	server.mux.HandleFunc("GET /methods", server.handleListMethods)
-	server.mux.HandleFunc("POST /methods", server.withAdmin(server.handleCreateMethod))
+	server.mux.HandleFunc("POST /methods", server.handleCreateMethod)
 	server.mux.HandleFunc("GET /methods/{id}", server.handleGetMethod)
-	server.mux.HandleFunc("PUT /methods/{id}", server.withAdmin(server.handleUpdateMethod))
-	server.mux.HandleFunc("DELETE /methods/{id}", server.withAdmin(server.handleDeleteMethod))
+	server.mux.HandleFunc("PUT /methods/{id}", server.handleUpdateMethod)
+	server.mux.HandleFunc("DELETE /methods/{id}", server.handleDeleteMethod)
 
 	return server
-}
-
-func (s *APIServer) withAdmin(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token, err := extractBearerToken(r.Header.Get("Authorization"))
-		if err != nil {
-			writeUnauthorized(w, err.Error())
-			return
-		}
-
-		claims, err := parseAuthToken(token)
-		if err != nil {
-			writeUnauthorized(w, "invalid token")
-			return
-		}
-		if !claims.IsAdmin {
-			writeForbidden(w, "admin required")
-			return
-		}
-
-		next(w, r)
-	}
 }
 
 func (s *APIServer) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -153,55 +110,7 @@ func (s *APIServer) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func (s *APIServer) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var input loginInput
-	if err := decodeJSON(r, &input); err != nil {
-		writeBadRequest(w, err.Error())
-		return
-	}
-	if input.Email == "" || input.Password == "" {
-		writeBadRequest(w, "email and password are required")
-		return
-	}
-
-	user, err := GetUserByEmail(s.db, input.Email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			writeUnauthorized(w, "invalid credentials")
-			return
-		}
-		writeDBError(w, err)
-		return
-	}
-
-	if err := CheckPassword(user.Password, input.Password); err != nil {
-		writeUnauthorized(w, "invalid credentials")
-		return
-	}
-
-	expires := time.Now().Add(getTokenTTL())
-	token, err := buildAuthToken(authClaims{
-		UserID:  user.UserID,
-		Email:   user.Email,
-		IsAdmin: user.IsAdmin,
-		Exp:     expires.Unix(),
-	})
-	if err != nil {
-		log.Printf("token create error: %v", err)
-		writeJSON(w, http.StatusInternalServerError, apiError{Error: "internal server error"})
-		return
-	}
-
-	if err := markUserLogin(s.db, user.UserID); err != nil {
-		log.Printf("user login timestamp update error: %v", err)
-	}
-
-	writeJSON(w, http.StatusOK, loginResponse{
-		Token:   token,
-		Expires: expires,
-		User:    toUserResponse(*user),
-	})
-}
+// --- ユーザーハンドラー ---
 
 func (s *APIServer) handleListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := ListUsers(s.db)
@@ -298,6 +207,8 @@ func (s *APIServer) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- カテゴリハンドラー ---
+
 func (s *APIServer) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	items, err := ListCategories(s.db)
 	if err != nil {
@@ -392,6 +303,8 @@ func (s *APIServer) handleDeleteCategory(w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// --- 決済方法ハンドラー ---
 
 func (s *APIServer) handleListMethods(w http.ResponseWriter, r *http.Request) {
 	items, err := ListMethods(s.db)
@@ -488,6 +401,8 @@ func (s *APIServer) handleDeleteMethod(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// --- ヘルパー関数群 ---
+
 func parsePathID(raw string) (int64, error) {
 	if raw == "" {
 		return 0, errors.New("id is required")
@@ -528,14 +443,6 @@ func writeBadRequest(w http.ResponseWriter, message string) {
 	writeJSON(w, http.StatusBadRequest, apiError{Error: message})
 }
 
-func writeUnauthorized(w http.ResponseWriter, message string) {
-	writeJSON(w, http.StatusUnauthorized, apiError{Error: message})
-}
-
-func writeForbidden(w http.ResponseWriter, message string) {
-	writeJSON(w, http.StatusForbidden, apiError{Error: message})
-}
-
 func writeDBError(w http.ResponseWriter, err error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		writeJSON(w, http.StatusNotFound, apiError{Error: "not found"})
@@ -564,94 +471,4 @@ func toUserResponse(user User) userResponse {
 	}
 
 	return response
-}
-
-func extractBearerToken(headerValue string) (string, error) {
-	if headerValue == "" {
-		return "", errors.New("authorization header is required")
-	}
-
-	parts := strings.SplitN(headerValue, " ", 2)
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || parts[1] == "" {
-		return "", errors.New("authorization header must be Bearer token")
-	}
-
-	return parts[1], nil
-}
-
-func markUserLogin(db *sql.DB, userID int64) error {
-	_, err := db.Exec("UPDATE users SET login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE user_id = $1", userID)
-	return err
-}
-
-func getTokenTTL() time.Duration {
-	raw := getEnv("AUTH_TOKEN_TTL_HOURS", "24")
-	hours, err := strconv.Atoi(raw)
-	if err != nil || hours <= 0 {
-		hours = 24
-	}
-
-	return time.Duration(hours) * time.Hour
-}
-
-func getAuthSecret() []byte {
-	return []byte(getEnv("AUTH_TOKEN_SECRET", "dev-only-change-me"))
-}
-
-func buildAuthToken(claims authClaims) (string, error) {
-	payload, err := json.Marshal(claims)
-	if err != nil {
-		return "", err
-	}
-
-	payloadB64 := base64.RawURLEncoding.EncodeToString(payload)
-	mac := hmac.New(sha256.New, getAuthSecret())
-	if _, err := mac.Write([]byte(payloadB64)); err != nil {
-		return "", err
-	}
-	signatureB64 := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
-
-	return fmt.Sprintf("%s.%s", payloadB64, signatureB64), nil
-}
-
-func parseAuthToken(token string) (*authClaims, error) {
-	parts := strings.Split(token, ".")
-	if len(parts) != 2 {
-		return nil, errors.New("invalid token format")
-	}
-
-	payloadB64 := parts[0]
-	givenSigB64 := parts[1]
-
-	mac := hmac.New(sha256.New, getAuthSecret())
-	if _, err := mac.Write([]byte(payloadB64)); err != nil {
-		return nil, err
-	}
-	expectedSig := mac.Sum(nil)
-
-	givenSig, err := base64.RawURLEncoding.DecodeString(givenSigB64)
-	if err != nil {
-		return nil, err
-	}
-	if !hmac.Equal(givenSig, expectedSig) {
-		return nil, errors.New("invalid token signature")
-	}
-
-	payload, err := base64.RawURLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return nil, err
-	}
-
-	var claims authClaims
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, err
-	}
-	if claims.UserID <= 0 || claims.Exp <= 0 {
-		return nil, errors.New("invalid token claims")
-	}
-	if time.Now().Unix() > claims.Exp {
-		return nil, errors.New("token expired")
-	}
-
-	return &claims, nil
 }
