@@ -1,8 +1,10 @@
 x-go-service: &go-service
-  build: .
+  build:
+    context: .
+    dockerfile: Dockerfile.api-server
   image: home-portal-go:latest
   volumes:
-    - ./src/api-server:/src
+    - ./server:/src
   working_dir: /src
   depends_on:
     - db
@@ -10,23 +12,6 @@ x-go-service: &go-service
     - home-portal_network
 
 services:
-  app:
-    <<: *go-service
-    profiles: ["app"]
-    container_name: home-portal-app
-    ports:
-      - "8080:8080"
-    tty: true
-    stdin_open: true
-    command: >
-      sh -c "
-      if [ ! -f go.mod ]; then
-        go mod init main
-      fi &&
-      go mod tidy &&
-      go build -o /out/main . &&
-      /out/main app
-      "
   api:
     <<: *go-service
     profiles: ["api"]
@@ -55,6 +40,22 @@ services:
       /out/main setup
       "
 
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.front
+    image: home-portal-web:latest
+    container_name: home-portal-web
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    working_dir: /app
+    command: >
+      sh -c " npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+    networks:
+      - home-portal_network
   db:
     image: postgres:16-alpine
     container_name: home-portal-db
