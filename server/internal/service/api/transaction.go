@@ -46,15 +46,41 @@ func toModelTransaction(req dto.CreateTransactionRequest) (model.Transaction, er
 		Note:  note,
 	}
 
-	// refund は意味を固定
+	// =========================================
+	// refund の場合
+	// =========================================
 	if req.RefundAdvanceID != nil {
-		t.IsTransfer = false
+		// 返済は収入扱い
 		t.Type = true
+
+		// 振替ではない
+		t.IsTransfer = false
+
+		// refund に net_amount は不要なので amount と同じにする
 		t.NetAmount = t.Amount
+
+		// refund 時は category / place を無効化
 		t.CategoryID = nil
 		t.Place = nil
 	}
 
+	// =========================================
+	// advance の場合
+	// =========================================
+	if len(req.Advances) > 0 {
+		// 立替は支出扱い
+		t.Type = false
+
+		// 振替ではない
+		t.IsTransfer = false
+
+		// net_amount 未指定なら amount と同じ
+		if t.NetAmount == 0 {
+			t.NetAmount = t.Amount
+		}
+	}
+
+	// 通常 transaction で net_amount 未指定なら amount と同じ
 	if t.NetAmount == 0 {
 		t.NetAmount = t.Amount
 	}
@@ -180,6 +206,7 @@ func (s *Server) createTransaction(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("✅ transaction created: %d", t.TransactionID)
 
+	// advance 登録
 	for _, a := range req.Advances {
 		if a.Name == "" || a.Amount <= 0 {
 			continue
@@ -190,6 +217,7 @@ func (s *Server) createTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// refund 適用
 	if req.RefundAdvanceID != nil {
 		if err := repository.ApplyRefundTx(tx, *req.RefundAdvanceID, t.Amount); err != nil {
 			writeError(w, 500, err.Error())
