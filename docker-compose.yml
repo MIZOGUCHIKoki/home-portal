@@ -1,61 +1,45 @@
-x-go-service: &go-service
-  build:
-    context: .
-    dockerfile: Dockerfile.api-server
-  image: home-portal-go:latest
-  volumes:
-    - ./server:/src
-  working_dir: /src
-  depends_on:
-    - db
-  networks:
-    - home-portal_network
+version: "3.9"
 
 services:
-  api:
-    <<: *go-service
-    profiles: ["api"]
-    container_name: home-portal-api
-    ports:
-      - "8081:8080"
-    tty: true
-    stdin_open: true
-    command: >
-      sh -c "
-      if [ ! -f go.mod ]; then
-        go mod init main
-      fi &&
-      go mod tidy &&
-      go build -o /out/main . &&
-      /out/main api
-      "
-  setup:
-    <<: *go-service
-    container_name: home-portal-setup
-    profiles: ["setup"]
-    command: >
-      sh -c "
-      go mod tidy &&
-      go build -o /out/main . &&
-      /out/main setup
-      "
-
-  web:
+  sv-dev:
     build:
       context: .
-      dockerfile: Dockerfile.front
-    image: home-portal-web:latest
+      dockerfile: Dockerfile.server-dev
+    container_name: home-portal-dev
+    stdin_open: true
+    tty: true
+    working_dir: /src
+    volumes:
+      - ./server:/src
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    depends_on:
+      - db
+    networks:
+      - home-portal_network 
+    command: "sh"
+    ports:
+      - "8080:8080"
+
+
+
+  web-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.front-dev
     container_name: home-portal-web
+    profiles: ["web-dev"]
     volumes:
       - ./web:/app
       - /app/node_modules
     working_dir: /app
     command: >
-      sh -c " npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     ports:
       - "5173:5173"
     networks:
       - home-portal_network
+
   db:
     image: postgres:16-alpine
     container_name: home-portal-db
@@ -73,8 +57,9 @@ services:
 
 volumes:
   db_data:
+  go-mod-cache:
+  go-build-cache:
 
 networks:
   home-portal_network:
     driver: bridge
-    name: home-portal_network
