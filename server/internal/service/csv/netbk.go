@@ -125,11 +125,10 @@ func ImportSBINetBank(db *sql.DB, dirPath string, userID int) error {
 				continue
 			}
 
-			// ✅ DB保存
-			// if err := repository.CreateTransaction(db, t); err != nil {
-			// 	fmt.Println("⚠️ DBエラー:", err)
-			// 	continue
-			// }
+			if err := repository.CreateTransaction(db, t); err != nil {
+				fmt.Println("⚠️ DBエラー:", err)
+				continue
+			}
 
 			count++
 			totalCount++

@@ -106,3 +106,42 @@ func GetAdvancesByTransactionID(db *sql.DB, transactionID int64) ([]model.Advanc
 
 	return list, rows.Err()
 }
+
+func UpdateAdvance(db *sql.DB, a *model.Advance) error {
+	if a.AdvanceID <= 0 {
+		return errors.New("advance_id is required")
+	}
+	if a.Name == "" {
+		return errors.New("name is required")
+	}
+	if a.Amount <= 0 {
+		return errors.New("amount must be positive")
+	}
+
+	result, err := db.Exec(`
+        UPDATE advance
+        SET
+            name = $1,
+            amount = $2,
+            status = returned_amount >= $2,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE advance_id = $3
+    `,
+		a.Name,
+		a.Amount,
+		a.AdvanceID,
+	)
+	if err != nil {
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}

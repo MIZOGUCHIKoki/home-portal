@@ -19,6 +19,8 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/transactions", s.handleTransactions)
+	mux.HandleFunc("/advances", s.handleAdvances)
+
 	mux.HandleFunc("/categories", s.handleCategories)
 	mux.HandleFunc("/methods", s.handleMethods)
 
@@ -51,9 +53,7 @@ func enableCORS(h http.Handler) http.Handler {
 
 func loggingMiddleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		log.Printf("➡️ %s %s", r.Method, r.URL.Path)
-
 		h.ServeHTTP(w, r)
 	})
 }

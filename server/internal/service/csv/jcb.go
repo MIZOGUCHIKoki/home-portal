@@ -115,11 +115,10 @@ func ImportJCB(db *sql.DB, dirPath string, userID int) error {
 				t.Amount = amount
 			}
 
-			// ✅ DB保存
-			// if err := repository.CreateTransaction(db, t); err != nil {
-			// 	fmt.Println("⚠️ DB登録失敗:", err)
-			// 	continue // ←止めない
-			// }
+			if err := repository.CreateTransaction(db, t); err != nil {
+				fmt.Println("⚠️ DB登録失敗:", err)
+				continue // ←止めない
+			}
 
 			count++
 			totalCount++

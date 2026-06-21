@@ -23,8 +23,24 @@ type CreateTransactionRequest struct {
 
 	Advances []AdvanceInput `json:"advances"`
 
-	// refund は 1 transaction = 1 advance 返済
 	RefundAdvanceID *int64 `json:"refund_advance_id"`
+}
+
+type UpdateTransactionRequest struct {
+	ID   int64  `json:"id"`
+	Date string `json:"date"`
+
+	Amount    int `json:"amount"`
+	NetAmount int `json:"net_amount"`
+
+	Type       bool `json:"type"`
+	IsTransfer bool `json:"is_transfer"`
+
+	Place string `json:"place"`
+	Note  string `json:"note"`
+
+	MethodID   int64  `json:"method_id"`
+	CategoryID *int64 `json:"category_id"`
 }
 
 type AdvanceResponse struct {
