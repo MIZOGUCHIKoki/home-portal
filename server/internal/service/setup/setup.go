@@ -9,8 +9,7 @@ import (
 
 func Run(conn *sql.DB) error {
 	fmt.Println("🛠️ テーブルの初期化を確認します...")
-
-	createTablesSQL := `
+	dropTablesSQL := `
 	-- 0. 既存テーブルを削除
 	DROP TABLE IF EXISTS advance CASCADE;
 	DROP TABLE IF EXISTS transactions CASCADE;
@@ -18,7 +17,21 @@ func Run(conn *sql.DB) error {
 	DROP TABLE IF EXISTS categories CASCADE;
 	DROP TABLE IF EXISTS methods CASCADE;
 	DROP TABLE IF EXISTS users CASCADE;
+	`
 
+	if os.Getenv("RESET_DATABASE") == "1" || os.Getenv("RESET_DATABASE") == "true" {
+		fmt.Println("⚠️ RESET_DATABASEが有効になっています。既存のテーブルを削除して再作成します...")
+		if _, err := conn.Exec(dropTablesSQL); err != nil {
+			return fmt.Errorf("テーブル削除エラー: %w", err)
+		}
+	} else {
+		fmt.Println("⚠️ 注意: テーブルの初期化は行われません。RESET_DATABASE環境変数を1またはtrueに設定すると、既存のテーブルが削除されて再作成されます。")
+		return nil
+	}
+
+	fmt.Println("✅ 既存テーブルの削除が完了しました！")
+
+	createTablesSQL := `
 	-- 1. Userテーブル
 	CREATE TABLE IF NOT EXISTS users (
 		user_id SERIAL PRIMARY KEY,
@@ -85,17 +98,12 @@ func Run(conn *sql.DB) error {
 
 	_, err := conn.Exec(createTablesSQL)
 	if err != nil {
-		return fmt.Errorf("テーブル初期化エラー: %w", err)
+		return fmt.Errorf("テーブル作成エラー: %w", err)
 	}
 
 	fmt.Println("✅ テーブルの準備が完了しました！")
 
 	fmt.Println("🌱 マスターデータ（カテゴリ・決済手段・管理者ユーザ）のセットアップを開始します...")
-
-	if _, err := conn.Exec(createTablesSQL); err != nil {
-		return fmt.Errorf("テーブル初期化エラー: %w", err)
-	}
-
 	if err := repository.SeedDefaultCategories(conn); err != nil {
 		return fmt.Errorf("カテゴリ: %w", err)
 	}

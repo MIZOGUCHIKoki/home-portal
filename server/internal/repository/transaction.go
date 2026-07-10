@@ -69,8 +69,6 @@ func CreateTransaction(db *sql.DB, t *model.Transaction) error {
     RETURNING transaction_id
     `
 
-	log.Printf("📦 INSERT: %+v", t)
-
 	return db.QueryRow(
 		query,
 		t.UserID,
@@ -138,7 +136,6 @@ func UpdateTransaction(db *sql.DB, t *model.Transaction) error {
 	return nil
 }
 
-// ✅ 追加: transaction削除
 func DeleteTransaction(db *sql.DB, transactionID int64) error {
 	if transactionID <= 0 {
 		return errors.New("transaction_id is required")

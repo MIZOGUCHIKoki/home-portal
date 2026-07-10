@@ -92,7 +92,6 @@ export default function TransactionList({ reloadKey }: Props) {
 		setEditRow(null)
 	}
 
-	// ✅ 追加: 削除
 	const startDelete = async (t: Transaction) => {
 		const ok = window.confirm(
 			`transaction ${t.id} を削除しますか？\n紐づく立替も削除されます。`
