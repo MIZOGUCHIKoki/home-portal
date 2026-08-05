@@ -16,19 +16,16 @@ services:
     depends_on:
       - db
     networks:
-      - home-portal_network 
+      - home-portal_network
     command: "sh"
     ports:
       - "8080:8080"
-
-
 
   web-dev:
     build:
       context: .
       dockerfile: Dockerfile.front-dev
     container_name: home-portal-web
-    profiles: ["web-dev"]
     volumes:
       - ./web:/app
       - /app/node_modules

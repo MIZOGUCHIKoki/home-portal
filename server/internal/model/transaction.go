@@ -20,4 +20,10 @@ type Transaction struct {
 	CategoryID *int64
 	Place      *string
 	Note       *string
+
+	// Rule: category/is_transferの設定方法 (false: 手動, true: PlaceRuleによる自動設定)
+	Rule bool
+
+	// IsCsv: 取引の登録経路 (false: 手作業で入力・編集, true: CSVインポート)
+	IsCsv bool
 }

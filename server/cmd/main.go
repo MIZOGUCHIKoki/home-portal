@@ -30,6 +30,8 @@ func main() {
 	if err := setup.Run(conn); err != nil {
 		log.Fatal(err)
 	}
+	importCSV(conn)
+
 	srv := api.NewServer(conn)
 	if os.Getenv("SEED_TEST_TRANSACTIONS") == "1" || os.Getenv("SEED_TEST_TRANSACTIONS") == "true" {
 		log.Println("🌱 SEED_TEST_TRANSACTIONSが有効になっています。テスト用の取引データをAPI経由で投入します...")

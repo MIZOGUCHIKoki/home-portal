@@ -12,6 +12,7 @@ func Run(conn *sql.DB) error {
 	dropTablesSQL := `
 	-- 0. 既存テーブルを削除
 	DROP TABLE IF EXISTS advance CASCADE;
+	DROP TABLE IF EXISTS place_rules CASCADE;
 	DROP TABLE IF EXISTS transactions CASCADE;
 	DROP TABLE IF EXISTS budgets CASCADE;
 	DROP TABLE IF EXISTS categories CASCADE;
@@ -79,6 +80,8 @@ func Run(conn *sql.DB) error {
 		budget_id INT REFERENCES budgets(budget_id) ON DELETE SET NULL,
 		category_id INT REFERENCES categories(category_id) ON DELETE SET NULL,
 		method_id INT NOT NULL REFERENCES methods(method_id),
+		rule BOOLEAN NOT NULL DEFAULT FALSE, -- false: 手動, true: PlaceRuleによる自動設定
+		is_csv BOOLEAN NOT NULL DEFAULT FALSE, -- false: 手作業で入力・編集, true: CSVインポート
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
@@ -93,6 +96,19 @@ func Run(conn *sql.DB) error {
 		status BOOLEAN NOT NULL DEFAULT FALSE, -- true: 返済完了, false: 返済未完了
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	-- 7. PlaceRuleテーブル（placeの一致判定でidentifier / is_transferを自動判定する）
+	-- match_type: 0=含まれる, 1=全文一致, 2=前方一致, 3=後方一致
+	CREATE TABLE IF NOT EXISTS place_rules (
+		place_rule_id SERIAL PRIMARY KEY,
+		text TEXT NOT NULL,
+		match_type SMALLINT NOT NULL DEFAULT 0,
+		identifier TEXT REFERENCES categories(identifier) ON DELETE SET NULL,
+		is_transfer BOOLEAN NOT NULL DEFAULT FALSE,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE (text, match_type)
 	);
 	`
 
@@ -110,6 +126,10 @@ func Run(conn *sql.DB) error {
 
 	if err := repository.SeedDefaultMethods(conn); err != nil {
 		return fmt.Errorf("決済手段: %w", err)
+	}
+
+	if err := repository.SeedDefaultPlaceRules(conn); err != nil {
+		return fmt.Errorf("PlaceRule: %w", err)
 	}
 
 	systemadminName := os.Getenv("SYSTEM_USER_ADMIN")

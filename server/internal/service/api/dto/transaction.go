@@ -66,5 +66,11 @@ type TransactionResponse struct {
 	Place string `json:"place"`
 	Note  string `json:"note"`
 
+	// Rule: false=手動, true=PlaceRuleによる自動設定
+	Rule bool `json:"rule"`
+
+	// IsCsv: false=手作業で入力・編集, true=CSVインポート
+	IsCsv bool `json:"is_csv"`
+
 	Advances []AdvanceResponse `json:"advances"`
 }

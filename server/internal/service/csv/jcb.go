@@ -104,15 +104,21 @@ func ImportJCB(db *sql.DB, dirPath string, userID int) error {
 				IsTransfer:    false,
 				Place:         &place,
 				MethodID:      int64(m.MethodID),
+				IsCsv:         true,
 			}
 
-			// ✅ 収入 / 支出判定
+			// ✅ 収入 / 支出判定（列の符号で自動判定）
 			if amount < 0 {
 				t.Type = true
 				t.Amount = -amount
 			} else {
 				t.Type = false
 				t.Amount = amount
+			}
+
+			// ✅ place に応じて category_id / is_transfer を自動付与
+			if err := repository.ApplyPlaceRule(db, t); err != nil {
+				fmt.Println("⚠️ placeルール適用エラー:", err)
 			}
 
 			if err := repository.CreateTransaction(db, t); err != nil {

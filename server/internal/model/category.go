@@ -16,7 +16,7 @@ type Category struct {
 var DefaultCategories = []CategorySeed{
 	// 食費
 	{
-		Identifier:   "food",
+		Identifier:   "supermarket",
 		CategoryName: "食費（スーパー）",
 	},
 	{
@@ -30,6 +30,10 @@ var DefaultCategories = []CategorySeed{
 	{
 		Identifier:   "daily",
 		CategoryName: "日用品",
+	},
+	{
+		Identifier:   "cafe",
+		CategoryName: "カフェ",
 	},
 
 	// 固定費
@@ -54,6 +58,10 @@ var DefaultCategories = []CategorySeed{
 	{
 		Identifier:   "transport",
 		CategoryName: "交通費",
+	},
+	{
+		Identifier:   "accommodation",
+		CategoryName: "宿泊費",
 	},
 
 	// 消費・娯楽
@@ -109,7 +117,14 @@ var DefaultCategories = []CategorySeed{
 		Identifier:   "other_income",
 		CategoryName: "その他収入",
 	},
-
+	{
+		Identifier:   "interest",
+		CategoryName: "利息",
+	},
+	{
+		Identifier:   "tax",
+		CategoryName: "税金",
+	},
 	// その他
 	{
 		Identifier:   "misc",

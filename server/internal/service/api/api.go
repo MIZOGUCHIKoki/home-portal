@@ -23,6 +23,10 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("/categories", s.handleCategories)
 	mux.HandleFunc("/methods", s.handleMethods)
+	mux.HandleFunc("/place-rules", s.handlePlaceRules)
+
+	mux.HandleFunc("/transactions/summary/monthly", s.handleMonthlySummary)
+	mux.HandleFunc("/transactions/summary/category", s.handleCategorySummary)
 
 	handler := enableCORS(mux)
 	handler = loggingMiddleware(handler)

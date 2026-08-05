@@ -100,6 +100,7 @@ func ImportSBINetBank(db *sql.DB, dirPath string, userID int) error {
 				IsTransfer:    false,
 				Place:         &content,
 				MethodID:      int64(m.MethodID),
+				IsCsv:         true,
 			}
 
 			// ✅ 出金（支出）
@@ -123,6 +124,11 @@ func ImportSBINetBank(db *sql.DB, dirPath string, userID int) error {
 				t.Amount = amount
 			} else {
 				continue
+			}
+
+			// ✅ place に応じて category_id / is_transfer を自動付与
+			if err := repository.ApplyPlaceRule(db, t); err != nil {
+				fmt.Println("⚠️ placeルール適用エラー:", err)
 			}
 
 			if err := repository.CreateTransaction(db, t); err != nil {

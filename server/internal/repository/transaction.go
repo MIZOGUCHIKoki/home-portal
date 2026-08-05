@@ -24,9 +24,11 @@ func CreateTransactionTx(tx *sql.Tx, t *model.Transaction) error {
         place,
         note,
         method_id,
-        category_id
+        category_id,
+        rule,
+        is_csv
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     RETURNING transaction_id
     `
 
@@ -44,6 +46,8 @@ func CreateTransactionTx(tx *sql.Tx, t *model.Transaction) error {
 		t.Note,
 		t.MethodID,
 		t.CategoryID,
+		t.Rule,
+		t.IsCsv,
 	).Scan(&t.TransactionID)
 }
 
@@ -63,9 +67,11 @@ func CreateTransaction(db *sql.DB, t *model.Transaction) error {
         place,
         note,
         method_id,
-        category_id
+        category_id,
+        rule,
+        is_csv
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     RETURNING transaction_id
     `
 
@@ -81,6 +87,8 @@ func CreateTransaction(db *sql.DB, t *model.Transaction) error {
 		t.Note,
 		t.MethodID,
 		t.CategoryID,
+		t.Rule,
+		t.IsCsv,
 	).Scan(&t.TransactionID)
 }
 
@@ -104,8 +112,10 @@ func UpdateTransaction(db *sql.DB, t *model.Transaction) error {
         note = $7,
         method_id = $8,
         category_id = $9,
+        rule = $10,
+        is_csv = $11,
         updated_at = CURRENT_TIMESTAMP
-    WHERE transaction_id = $10
+    WHERE transaction_id = $12
     `
 
 	result, err := db.Exec(
@@ -119,6 +129,8 @@ func UpdateTransaction(db *sql.DB, t *model.Transaction) error {
 		t.Note,
 		t.MethodID,
 		t.CategoryID,
+		t.Rule,
+		t.IsCsv,
 		t.TransactionID,
 	)
 	if err != nil {
@@ -173,7 +185,9 @@ func GetTransactions(db *sql.DB, userID int64) ([]model.Transaction, error) {
         place,
         note,
         method_id,
-        category_id
+        category_id,
+        rule,
+        is_csv
     FROM transactions
     WHERE user_id = $1
     ORDER BY date DESC, transaction_id DESC
@@ -206,6 +220,8 @@ func GetTransactions(db *sql.DB, userID int64) ([]model.Transaction, error) {
 			&note,
 			&t.MethodID,
 			&categoryID,
+			&t.Rule,
+			&t.IsCsv,
 		)
 		if err != nil {
 			return nil, err
