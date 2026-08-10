@@ -10,6 +10,8 @@ import (
 	"kakeibo/internal/service/api"
 	"kakeibo/internal/service/api/dto"
 	"kakeibo/internal/service/csv"
+	"kakeibo/internal/service/setup"
+	"kakeibo/internal/storage"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -26,12 +28,22 @@ func main() {
 	}
 	defer conn.Close()
 
-	// if err := setup.Run(conn); err != nil {
-	// 	log.Fatal(err)
-	// }
-	importCSV(conn)
+	if os.Getenv("DEV_MODE") == "1" || os.Getenv("DEV_MODE") == "true" {
+		log.Println("🛠️ DEV_MODEが有効になっています。テーブル初期化とCSVインポートを実行します...")
+		if err := setup.Run(conn); err != nil {
+			log.Fatal(err)
+		}
+		if err := importCSV(conn); err != nil {
+			log.Fatal(err)
+		}
+	}
 
-	srv := api.NewServer(conn)
+	s3Client, err := storage.NewS3ClientFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	srv := api.NewServer(conn, s3Client)
 	if os.Getenv("SEED_TEST_TRANSACTIONS") == "1" || os.Getenv("SEED_TEST_TRANSACTIONS") == "true" {
 		log.Println("🌱 SEED_TEST_TRANSACTIONSが有効になっています。テスト用の取引データをAPI経由で投入します...")
 		if err := seedTestTransactionsViaAPI(srv); err != nil {

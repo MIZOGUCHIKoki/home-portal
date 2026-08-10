@@ -4,14 +4,17 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+
+	"kakeibo/internal/storage"
 )
 
 type Server struct {
 	DB *sql.DB
+	S3 *storage.S3Client
 }
 
-func NewServer(db *sql.DB) *Server {
-	return &Server{DB: db}
+func NewServer(db *sql.DB, s3Client *storage.S3Client) *Server {
+	return &Server{DB: db, S3: s3Client}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -27,6 +30,9 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("/transactions/summary/monthly", s.handleMonthlySummary)
 	mux.HandleFunc("/transactions/summary/category", s.handleCategorySummary)
+
+	mux.HandleFunc("/csv/upload", s.handleCsvUpload)
+	mux.HandleFunc("/csv/check", s.handleCsvCheck)
 
 	handler := enableCORS(mux)
 	handler = loggingMiddleware(handler)

@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile.server-dev
     container_name: home-portal-dev
+    profiles:
+      - dev
     stdin_open: true
     tty: true
     working_dir: /src
@@ -24,6 +26,10 @@ services:
       context: .
       dockerfile: Dockerfile.front-dev
     container_name: home-portal-web
+    profiles:
+      - dev
+    stdin_open: true
+    tty: true
     volumes:
       - ./web:/app
       - /app/node_modules

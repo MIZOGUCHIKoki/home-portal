@@ -288,6 +288,106 @@ func FindManualCandidatesForCsv(db *sql.DB, userID, methodID int64, date time.Ti
 	return ids, rows.Err()
 }
 
+// GetTransactionByID retrieves a single transaction by ID.
+func GetTransactionByID(db *sql.DB, transactionID int64) (*model.Transaction, error) {
+	query := `
+    SELECT
+        transaction_id,
+        user_id,
+        date,
+        amount,
+        net_amount,
+        type,
+        is_transfer,
+        place,
+        note,
+        method_id,
+        category_id,
+        rule,
+        is_csv
+    FROM transactions
+    WHERE transaction_id = $1
+    `
+
+	var t model.Transaction
+	var place sql.NullString
+	var note sql.NullString
+	var categoryID sql.NullInt64
+
+	err := db.QueryRow(query, transactionID).Scan(
+		&t.TransactionID,
+		&t.UserID,
+		&t.Date,
+		&t.Amount,
+		&t.NetAmount,
+		&t.Type,
+		&t.IsTransfer,
+		&place,
+		&note,
+		&t.MethodID,
+		&categoryID,
+		&t.Rule,
+		&t.IsCsv,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if place.Valid {
+		v := place.String
+		t.Place = &v
+	}
+	if note.Valid {
+		v := note.String
+		t.Note = &v
+	}
+	if categoryID.Valid {
+		v := categoryID.Int64
+		t.CategoryID = &v
+	}
+
+	return &t, nil
+}
+
+// FindManualMismatchCandidates returns the transaction_ids of CsvStatusManual
+// transactions that share exactly two of (date, amount, place) with the given
+// CSV row but not all three (an all-three match is an exact reconciliation
+// candidate, see FindManualCandidatesForCsv, not a mismatch). These are
+// manual entries that likely refer to the same real-world transaction as the
+// CSV row but were recorded with a different date, place, or amount.
+func FindManualMismatchCandidates(db *sql.DB, userID, methodID int64, date time.Time, amount int, place string) ([]int64, error) {
+	query := `
+    SELECT transaction_id
+    FROM transactions
+    WHERE user_id = $1
+      AND method_id = $2
+      AND is_csv = $3
+      AND (
+        (date = $4 AND amount = $5) OR
+        (date = $4 AND LOWER(TRIM(place)) = LOWER(TRIM($6))) OR
+        (amount = $5 AND LOWER(TRIM(place)) = LOWER(TRIM($6)))
+      )
+      AND NOT (date = $4 AND amount = $5 AND LOWER(TRIM(place)) = LOWER(TRIM($6)))
+    `
+
+	rows, err := db.Query(query, userID, methodID, model.CsvStatusManual, date, amount, place)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, rows.Err()
+}
+
 // MarkTransactionReconciled sets is_csv = CsvStatusReconciled for the given
 // transaction, but only if it is currently CsvStatusManual.
 func MarkTransactionReconciled(db *sql.DB, transactionID int64) error {
