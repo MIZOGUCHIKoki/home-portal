@@ -10,7 +10,6 @@ import (
 	"kakeibo/internal/service/api"
 	"kakeibo/internal/service/api/dto"
 	"kakeibo/internal/service/csv"
-	"kakeibo/internal/service/setup"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -27,9 +26,9 @@ func main() {
 	}
 	defer conn.Close()
 
-	if err := setup.Run(conn); err != nil {
-		log.Fatal(err)
-	}
+	// if err := setup.Run(conn); err != nil {
+	// 	log.Fatal(err)
+	// }
 	importCSV(conn)
 
 	srv := api.NewServer(conn)

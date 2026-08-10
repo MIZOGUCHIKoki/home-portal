@@ -147,7 +147,7 @@ func toTransactionResponse(t model.Transaction, advances []model.Advance) dto.Tr
 		Place:      place,
 		Note:       note,
 		Rule:       t.Rule,
-		IsCsv:      t.IsCsv,
+		IsCsv:      int(t.IsCsv),
 		Advances:   []dto.AdvanceResponse{},
 	}
 

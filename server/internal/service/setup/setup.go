@@ -81,7 +81,7 @@ func Run(conn *sql.DB) error {
 		category_id INT REFERENCES categories(category_id) ON DELETE SET NULL,
 		method_id INT NOT NULL REFERENCES methods(method_id),
 		rule BOOLEAN NOT NULL DEFAULT FALSE, -- false: 手動, true: PlaceRuleによる自動設定
-		is_csv BOOLEAN NOT NULL DEFAULT FALSE, -- false: 手作業で入力・編集, true: CSVインポート
+		is_csv SMALLINT NOT NULL DEFAULT 0 CHECK (is_csv IN (0, 1, 2)), -- 0: 手作業(未確認), 1: CSVインポート, 2: 手作業(CSV突合済み)
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);

@@ -69,8 +69,8 @@ type TransactionResponse struct {
 	// Rule: false=手動, true=PlaceRuleによる自動設定
 	Rule bool `json:"rule"`
 
-	// IsCsv: false=手作業で入力・編集, true=CSVインポート
-	IsCsv bool `json:"is_csv"`
+	// IsCsv: 0=手作業(未確認), 1=CSVインポート, 2=手作業(CSV突合済み)
+	IsCsv int `json:"is_csv"`
 
 	Advances []AdvanceResponse `json:"advances"`
 }

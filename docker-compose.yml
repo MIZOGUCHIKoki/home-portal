@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   sv-dev:
     build:
@@ -51,6 +49,19 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - home-portal_network
+  minio:
+    image: minio/minio:latest
+    container_name: local-s3
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
+    # volumesを追加
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"
 
 volumes:
   db_data:
